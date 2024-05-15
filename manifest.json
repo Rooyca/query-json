@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
-	"version": "1.0.0",
+	"id": "query-json",
+	"name": "Query JSON",
+	"version": "0.0.1",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "Read, query and work with JSON.",
+	"author": "rooyca",
+	"authorUrl": "https://rooyca.github.io/",
+	"fundingUrl": "https://buymeacoffee.com/rooyca",
 	"isDesktopOnly": false
 }
