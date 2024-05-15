@@ -1,26 +1,57 @@
 # QUERY JSON
 
+Query JSON is a simple Obsidian plugin that allows you to query JSON in your vault. You can import the files directly into your notes, or you can paste the JSON data in a code block.
+
+~~~markdown
+```qjson
+#qj-id: 23
+#qj-file: data.json
+#qj-id-desc: Test data
+```
+~~~
+
 ## FLAGS
 
-### `#qj-id`
+### `#qj-id` (required)
 
 JSON object identifier.
 
-### `#qj-id-ds`
+### `#qj-id-ds` (optional)
 
-Don't show the identifier in the output.
+(Stands for "id don't show") 
 
-### `#qj-id-format`
+If present, it shows nothing after the code block is rendered.
 
-Format the output. `{}` is replaced with the identifier.
+### `#qj-id-desc` (optional)
 
-### `#qj-file`
+(Stands for "id description") 
 
-File path.
+A short description of the JSON. Default is `»»» Query JSON «««`.
 
+### `#qj-file` (optional)
 
-## TODOS
+File path. If not present, the plugin will search for the JSON data inside the code block.
 
-- [ ] Write better documentation.
+## QUERY
 
+The query is a simple expression. You can use the query to filter the data you want to show in your note. For instance, if you have JSON data like this:
 
+```json
+{
+  "store": {
+	"books": [
+	  {
+		"author": "John Doe",
+		"title": "The book"
+	  }
+	]
+  }
+}
+```
+You can use the following query:
+
+```
+@>23;store.books.0.author;
+```
+
+It will show the author of the first book in the store. The `23` is the object identifier (ID).

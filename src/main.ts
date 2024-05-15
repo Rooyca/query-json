@@ -17,14 +17,14 @@ export default class QJSON extends Plugin {
 			const id = source.match(/#qj-id: (\d+)/)[1];
 
 			if (!source.includes('#qj-id-ds')) {
-				var format;
+				var desc;
 				try {
-					format = source.match(/#qj-id-format: (.+)/)[1];
-					format = format.replace(/{}/g, id);
+					desc = source.match(/#qj-id-desc: (.+)/)[1];
 				} catch (e) {
-					format = "<hr><h2>qjson-🆔: " + id + "</h2><hr>";
+					desc = "»»» Query JSON «««";
 				}
-				el.innerHTML = el.innerHTML + format;
+				el.createEl('h3', {text: desc});
+				el.createEl('h4', {text: "ID: " + id});
 			}
 
 			if (source.includes('#qj-file:')) {

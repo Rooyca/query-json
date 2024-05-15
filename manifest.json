@@ -1,11 +1,15 @@
 {
 	"id": "query-json",
 	"name": "Query JSON",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"minAppVersion": "0.15.0",
 	"description": "Read, query and work with JSON.",
 	"author": "rooyca",
 	"authorUrl": "https://rooyca.github.io/",
-	"fundingUrl": "https://buymeacoffee.com/rooyca",
+	"fundingUrl": {
+		"Buy Me a Coffee": "https://www.buymeacoffee.com/rooyca",
+		"Githubn Sponsors": "https://github.com/sponsors/Rooyca/",
+		"Ko-Fi": "https://ko-fi.com/rooyca"
+	},
 	"isDesktopOnly": false
 }
