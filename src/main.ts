@@ -40,27 +40,38 @@ export default class QJSON extends Plugin {
 			statusBarItemEl.setText('QJSON: ' + qjCount);
 		});
 
-		this.app.workspace.on('editor-change', async () => {
-	        const editor = this.app.workspace.activeLeaf.view.sourceMode.cmEditor;
-	        const cursor = editor.getCursor();
-	        const line_t = editor.getLine(cursor.line);
-	        const match = line_t.match(/@>(\d+);(.+);/);
-	        if (match) {
-	        	const id = match[1];
-	        	const path = match[2];
-	        	const el = document.querySelector('.QJSON-'+id);
-	        	if (!el) return;
-	        	const json = JSON.parse(el.innerText);
-	        	const value = path.split('.').reduce((acc, key) => acc[key], json);
-			    const atIndex = line_t.indexOf('@>');
-			    const lastSemicolonIndex = line_t.lastIndexOf(';');
-			    const replaceStart = { line: cursor.line, ch: atIndex };
-			    const replaceEnd = { line: cursor.line, ch: lastSemicolonIndex + 1 };
-			    const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-			    editor.replaceRange(stringValue, replaceStart, replaceEnd);
-	        }
-		});
+		this.registerEvent(this.app.workspace.on('editor-change', async () => {
+		  const editor = this.app.workspace.activeLeaf.view.sourceMode.cmEditor;
+		  const cursor = editor.getCursor();
+		  const line = editor.getLine(cursor.line);
 
+		  const match = line.match(/@>(\d+);(.+)/);
+		  if (!match) return;
+		  const id = match[1];
+		  const path = match[2];
+
+		  const el = document.querySelector('.QJSON-' + id);
+		  if (!el) return;
+		  const json = JSON.parse(el.innerText);
+
+		  const lastChar = line[line.length - 1];
+		  const value = getJSONPath(json, path.replace(/;/, ''));
+
+		  if (lastChar !== ';') {
+		    if (value !== undefined) {
+		    	new Notice(JSON.stringify(value, null, 2));
+		    } 
+		  } else {
+		    const atIndex = line.indexOf('@>');
+		    const replaceEnd = { line: cursor.line, ch: line.length }; // Replace to end of line
+		    const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+		    editor.replaceRange(stringValue, { line: cursor.line, ch: atIndex }, replaceEnd);
+		  }
+		}));
 	}
 
+}
+
+function getJSONPath(json, path) {
+	  return path.split('.').reduce((acc, key) => acc[key], json);
 }
