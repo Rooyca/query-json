@@ -43,8 +43,7 @@ export default class QJSON extends Plugin {
 			statusBarItemEl.setText('QJSON: ' + qjCount);
 		});
 
-		this.registerEvent(this.app.workspace.on('editor-change', async () => {
-		  const editor = this.app.workspace.activeLeaf.view.sourceMode.cmEditor;
+		this.registerEvent(this.app.workspace.on('editor-change', async (editor, info) => {
 		  const cursor = editor.getCursor();
 		  const line = editor.getLine(cursor.line);
 
@@ -62,7 +61,11 @@ export default class QJSON extends Plugin {
 
 		  if (lastChar !== ';') {
 		    if (value !== undefined) {
-		    	new Notice(JSON.stringify(value, null, 2));
+		    	if (JSON.stringify(value).length > 400) {
+		    		new Notice(JSON.stringify(value, null, 2).substring(0, 300)+'...');
+		    	} else {
+		    		new Notice(JSON.stringify(value, null, 2));
+		    	}
 		    } 
 		  } else {
 		    const atIndex = line.indexOf('@>');
