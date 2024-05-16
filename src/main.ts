@@ -1,83 +1,41 @@
 import { App, Notice, Plugin } from 'obsidian';
 
 export default class QJSON extends Plugin {
+  async onload() {
+    this.registerMarkdownPostProcessor( async (element, context) => {
+      const codeblocks = element.findAll("code");
 
-	async onload() {
-		const statusBarItemEl = this.addStatusBarItem();
-		let qjCount;
-		qjCount = document.querySelectorAll('.notHere').length;
-		statusBarItemEl.setText('QJSON: ' + qjCount);
+      for (let codeblock of codeblocks) {
+        const text = codeblock.innerText.trim();
 
-		this.registerMarkdownCodeBlockProcessor("qjson", async (source, el, ctx) => {
-			if (!source.includes('#qj-id:')) {
-				new Notice('No ID found');
-				el.createEl('pre', {text: 'No ID found'});
-				return;
-			}
+		// @NAME.json=store.books.0;
+        const regex = /@(.+)\.json=(.+);/;
+		const match = text.match(regex);
 
-			const id = source.match(/#qj-id: (\d+)/)[1];
+        if (match) {
+		  let result;
 
-			let desc;
-
-			if (!source.includes('#qj-id-ds')) {
-			    try {
-			        desc = source.match(/#qj-id-desc: (.+)/)[1];
-			    } catch (e) {
-			        desc = "»»» Query JSON «««";
-			    }
-			    el.createEl('h3', {text: desc});
-			    el.createEl('h4', {text: "ID: " + id});
-			}
-
-
-			if (source.includes('#qj-file:')) {
-				const file = source.match(/#qj-file: (.+)/)[1];
-				const response = await this.app.vault.adapter.read(file);
-				source = response;
-			}
-
-			const json = JSON.parse(source);
-			el.createEl('pre', {text: JSON.stringify(json, null, 2), cls: 'QJSON-'+id+' notHere'});
-
-			qjCount = document.querySelectorAll('.notHere').length;
-			statusBarItemEl.setText('QJSON: ' + qjCount);
-		});
-
-		this.registerEvent(this.app.workspace.on('editor-change', async (editor, info) => {
-		  const cursor = editor.getCursor();
-		  const line = editor.getLine(cursor.line);
-
-		  const match = line.match(/@>(\d+);(.+)/);
-		  if (!match) return;
-		  const id = match[1];
-		  const path = match[2];
-
-		  const el = document.querySelector('.QJSON-' + id);
-		  if (!el) return;
-		  const json = JSON.parse(el.innerText);
-
-		  const lastChar = line[line.length - 1];
-		  const value = getJSONPath(json, path.replace(/;/, ''));
-
-		  if (lastChar !== ';') {
-		    if (value !== undefined) {
-		    	if (JSON.stringify(value).length > 400) {
-		    		new Notice(JSON.stringify(value, null, 2).substring(0, 300)+'...');
-		    	} else {
-		    		new Notice(JSON.stringify(value, null, 2));
-		    	}
-		    } 
-		  } else {
-		    const atIndex = line.indexOf('@>');
-		    const replaceEnd = { line: cursor.line, ch: line.length }; // Replace to end of line
-		    const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-		    editor.replaceRange(stringValue, { line: cursor.line, ch: atIndex }, replaceEnd);
+		  try {
+		  	const file = await this.app.vault.adapter.read(match[1] + ".json");
+		  	result = getJSONPath(file, match[2]);
+		  } catch (e) {
+		  	console.error(e);
+		  	new Notice("Error! Something went wrong!");
+		  	result = "Error!";
 		  }
-		}));
-	}
 
+		  const stringResult = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+
+          const resultEl = codeblock.createSpan({
+            text: stringResult,
+          });
+          codeblock.replaceWith(resultEl);
+        }
+      }
+    });
+  }
 }
 
 function getJSONPath(json, path) {
-	  return path.split('.').reduce((acc, key) => acc[key], json);
+	return path.split('.').reduce((obj, key) => obj[key], JSON.parse(json));
 }
