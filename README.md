@@ -12,7 +12,7 @@ Query JSON is a simple Obsidian plugin that allows you to query JSON in your vau
 
 ## FLAGS
 
-### `#qj-id` (required)
+### `#qj-id` INT (required)
 
 JSON object identifier.
 
@@ -55,3 +55,12 @@ You can use the following query:
 ```
 
 It will show the author of the first book in the store. The `23` is the object identifier (ID).
+
+---
+
+It's posible to query json files. For example, if you have a file named `data.json` with the previous JSON data, you can use the following query:
+
+```
+@>data.json;store.books.0.author;
+```
+

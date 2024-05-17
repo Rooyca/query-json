@@ -16,6 +16,12 @@ export default class QJSON extends Plugin {
 			}
 
 			const id = source.match(/#qj-id: (\d+)/)[1];
+			// check if id is a number
+			if (isNaN(id)) {
+				new Notice('ID must be a number');
+				el.createEl('pre', {text: 'ID must be a number'});
+				return;
+			}
 
 			let desc;
 
@@ -47,14 +53,19 @@ export default class QJSON extends Plugin {
 		  const cursor = editor.getCursor();
 		  const line = editor.getLine(cursor.line);
 
-		  const match = line.match(/@>(\d+);(.+)/);
+		  const match = line.match(/@>(.+);(.+)/);
 		  if (!match) return;
 		  const id = match[1];
 		  const path = match[2];
+		  let json;
 
-		  const el = document.querySelector('.QJSON-' + id);
-		  if (!el) return;
-		  const json = JSON.parse(el.innerText);
+		  if (!isNaN(parseInt(id)) && !id.includes('.json')) {
+		    const el = document.querySelector('.QJSON-' + id);
+			if (!el) return;
+		  	json = JSON.parse(el.innerText);
+		  } else {
+		  	json = JSON.parse(await this.app.vault.adapter.read(id));
+		  }
 
 		  const lastChar = line[line.length - 1];
 		  const value = getJSONPath(json, path.replace(/;/, ''));
