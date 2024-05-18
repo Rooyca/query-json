@@ -72,10 +72,18 @@ export default class QJSON extends Plugin {
 
 		  if (lastChar !== ';') {
 		    if (value !== undefined) {
-		    	if (JSON.stringify(value).length > 400) {
-		    		new Notice(JSON.stringify(value, null, 2).substring(0, 300)+'...');
+			  	const notice = document.querySelector('.notice');
+			  	if (notice) notice.remove();
+			  	
+		    	const keys = Object.keys(value);
+		    	const keysAreNumbers = keys.every(key => !isNaN(parseInt(key)));
+
+				if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+					new Notice(value.toString());
+		    	} else if (keysAreNumbers) {
+		    		new Notice('Total Keys: ' + (keys.length- 1 ));
 		    	} else {
-		    		new Notice(JSON.stringify(value, null, 2));
+		    		new Notice('Total Keys: ' + keys.length + '\n' + '____________' + '\n' + keys.join('\n'));
 		    	}
 		    } 
 		  } else {
