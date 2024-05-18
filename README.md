@@ -17,6 +17,12 @@ To utilize Query JSON, simply include the plugin's syntax within your note, enca
 ```
 ~~~
 
+Then, you can query the data using the following syntax:
+
+```
+@23>store.books.0.author;
+```
+
 ### Flags
 
 Query JSON supports various flags to enhance customization and functionality:
@@ -57,7 +63,7 @@ Crafting queries with Query JSON is straightforward, allowing you to refine and 
 To retrieve the author of the first book within the store, use the following query:
 
 ```
-@>23;store.books.0.author;
+@23>store.books.0.author;
 ```
 > [!NOTE]
 > 
@@ -67,7 +73,7 @@ Furthermore, Query JSON extends its functionality to external JSON files. For ex
 
 
 ```
-@>data.json;store.books.0.author;
+@data.json>store.books.0.author;
 ```
 
 Unlock the potential of your JSON data effortlessly with Query JSON, revolutionizing your note-taking experience.
