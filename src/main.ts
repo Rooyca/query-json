@@ -53,10 +53,20 @@ export default class QJSON extends Plugin {
 		  const cursor = editor.getCursor();
 		  const line = editor.getLine(cursor.line);
 
-		  const match = line.match(/@>(.+);(.+)/);
+		  const lastChar = line[line.length - 1];
+
+		  const match = line.match(/@(.+)>(.+)|@(.+)>/);
 		  if (!match) return;
-		  const id = match[1];
-		  const path = match[2];
+
+		  if (lastChar !== ';' && lastChar !== '.' && lastChar !== '>') return;
+
+		  const id = match[1] || match[3];
+		  let path = "";
+		  
+		  if (match[2] !== undefined) {
+		  	path = match[2].slice(0, -1).replace(/>/, '')
+		  }
+
 		  let json;
 
 		  if (!isNaN(parseInt(id)) && !id.includes('.json')) {
@@ -67,8 +77,7 @@ export default class QJSON extends Plugin {
 		  	json = JSON.parse(await this.app.vault.adapter.read(id));
 		  }
 
-		  const lastChar = line[line.length - 1];
-		  const value = getJSONPath(json, path.replace(/;/, ''));
+		  const value = getJSONPath(json, path);
 
 		  if (lastChar !== ';') {
 		    if (value !== undefined) {
@@ -87,7 +96,7 @@ export default class QJSON extends Plugin {
 		    	}
 		    } 
 		  } else {
-		    const atIndex = line.indexOf('@>');
+		    const atIndex = line.indexOf('@');
 		    const replaceEnd = { line: cursor.line, ch: line.length }; // Replace to end of line
 		    const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
 		    editor.replaceRange(stringValue, { line: cursor.line, ch: atIndex }, replaceEnd);
@@ -97,6 +106,7 @@ export default class QJSON extends Plugin {
 
 }
 
-function getJSONPath(json, path) {
-	  return path.split('.').reduce((acc, key) => acc[key], json);
+function getJSONPath(json: Object, path: string) {
+	if (path === '') return json;
+	return path.split('.').reduce((acc, key) => acc[key], json);
 }
