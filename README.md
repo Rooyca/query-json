@@ -5,6 +5,8 @@
 
 Query JSON is a versatile Obsidian plugin designed to streamline your data retrieval process within your vault. With this tool, you can effortlessly extract and manipulate JSON data directly from your notes or external files.
 
+[Showcase](https://github.com/Rooyca/query-json/assets/42101257/cb4d165c-dae7-408f-a910-bf964a3152c0)
+
 ## ⚡ How to Use
 
 To utilize QJSON, simply include the plugin's syntax within your note, encapsulating the JSON data or providing a file reference. Below is an example of the syntax:
