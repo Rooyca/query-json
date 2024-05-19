@@ -5,7 +5,7 @@ export default class QJSON extends Plugin {
 	async onload() {
 		const statusBarItemEl = this.addStatusBarItem();
 		let qjCount;
-		qjCount = document.querySelectorAll('.notHere').length;
+		qjCount = document.querySelectorAll('.cdQjson').length;
 		statusBarItemEl.setText('QJSON: ' + qjCount);
 
 		this.registerMarkdownCodeBlockProcessor("qjson", async (source, el, ctx) => {
@@ -25,16 +25,21 @@ export default class QJSON extends Plugin {
 
 			let desc;
 
-			if (!source.includes('#qj-id-ds')) {
+			if (!source.includes('#qj-hide-id')) {
 			    try {
-			        desc = source.match(/#qj-id-desc: (.+)/)[1];
+			        desc = source.match(/#qj-desc: (.+)/)[1];
 			    } catch (e) {
 			        desc = "»»» Query JSON «««";
 			    }
-			    el.createEl('h3', {text: desc});
-			    el.createEl('h4', {text: "ID: " + id});
+			    el.createEl('h3', {text: desc, cls: 'centerQJtext'});
+			    el.createEl('h4', {text: "ID: " + id, cls: 'centerQJtext'});
 			}
 
+			let showJson = 'notHere';
+
+			if (source.includes('#qj-show-json')) {
+				showJson = '';
+			}
 
 			if (source.includes('#qj-file:')) {
 				const file = source.match(/#qj-file: (.+)/)[1];
@@ -43,9 +48,9 @@ export default class QJSON extends Plugin {
 			}
 
 			const json = JSON.parse(source);
-			el.createEl('pre', {text: JSON.stringify(json, null, 2), cls: 'QJSON-'+id+' notHere'});
+			el.createEl('pre', {text: JSON.stringify(json, null, 2), cls: 'QJSON-'+id+' cdQjson '+showJson});
 
-			qjCount = document.querySelectorAll('.notHere').length;
+			qjCount = document.querySelectorAll('.cdQjson').length;
 			statusBarItemEl.setText('QJSON: ' + qjCount);
 		});
 
