@@ -11,7 +11,7 @@
 
 ---
 
-[qj-showcase](qj-showcase.gif)
+![qj-showcase](qj-showcase.gif)
 
 Query JSON is a Obsidian plugin designed to simplify the process of querying and extracting data from JSON objects. By incorporating a user-friendly syntax, the plugin enables you to retrieve specific information from JSON data stored within your notes or external files.
 
