@@ -3,9 +3,17 @@
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/rooyca/query-json?logo=github&color=ee8449&style=flat-square)](https://github.com/rooyca/query-json/releases/latest)
 [![Obsidian plugin release](https://img.shields.io/badge/Obsidian%20plugin%20release-purple?logo=obsidian&style=flat-square)](https://obsidian.md/plugins?id=query-json)
 
-Query JSON is a versatile Obsidian plugin designed to streamline your data retrieval process within your vault. With this tool, you can effortlessly extract and manipulate JSON data directly from your notes or external files.
+## 📊 Poll
 
-[Showcase](https://github.com/Rooyca/query-json/assets/42101257/cb4d165c-dae7-408f-a910-bf964a3152c0)
+**We need your feedback to improve the plugin. Please take a moment to complete the following poll:**
+
+[![Poll](https://img.shields.io/badge/Poll-Feedback-blue?style=flat-square)](https://github.com/Rooyca/query-json/discussions/2)
+
+---
+
+[qj-showcase](qj-showcase.gif)
+
+Query JSON is a Obsidian plugin designed to simplify the process of querying and extracting data from JSON objects. By incorporating a user-friendly syntax, the plugin enables you to retrieve specific information from JSON data stored within your notes or external files.
 
 ## ⚡ How to Use
 
