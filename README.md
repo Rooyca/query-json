@@ -5,7 +5,7 @@
 
 ## 📊 Poll
 
-**We need your feedback to improve the plugin. Please take a moment to complete the following poll:**
+### We need your feedback. Please take a moment to answer ONE question.
 
 [![Poll](https://img.shields.io/badge/Poll-Feedback-blue?style=flat-square)](https://github.com/Rooyca/query-json/discussions/2)
 
