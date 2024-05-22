@@ -72,6 +72,18 @@ Furthermore, QJSON extends its functionality to external JSON files. For example
 @data.json>store.books.0.author;
 ```
 
+It's also posible to query the file directly using the `#qj-query` flag:
+
+~~~markdown
+```qjson
+#qj-id: 24
+#qj-file: data.json
+#qj-show-json
+#qj-hide-id
+#qj-query: pageProps.heroData[win_rate >= 55 && role == Mage]
+```
+~~~
+
 ## 🏳️ Flags
 
 Query JSON supports various flags to enhance customization and functionality:
@@ -95,6 +107,28 @@ This flag allows you to display the JSON within the rendered output. By default 
 #### `#qj-file` (optional)
 
 If provided, this flag specifies the file path containing the JSON data. In its absence, the plugin scans for JSON data within the code block.
+
+#### `#qj-query` (optional)
+
+This flag allows you to query the JSON file directly from your codeblock. The query syntax must be inside brackets `[]`. The supported operators are:
+
+- Logical operators: `&&`, `||`
+- Comparison operators: `==`, `!=`, `>`, `>=`, `<`, `<=`
+
+**Example**:
+
+~~~markdown
+```qjson
+#qj-id: 24
+#qj-file: data.json
+#qj-show-json
+#qj-hide-id
+#qj-query: pageProps.heroData[win_rate >= 55 && role == Mage]
+```
+~~~
+
+> [!NOTE]
+> The `#qj-show-json` flag is mandatory when using the `#qj-query` flag.
 
 ## 🛠️ Contribution
 

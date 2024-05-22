@@ -1,4 +1,5 @@
 import { App, Notice, Plugin } from 'obsidian';
+import { parseQuery, executeQuery} from './functions';
 
 export default class QJSON extends Plugin {
 
@@ -21,6 +22,13 @@ export default class QJSON extends Plugin {
 				new Notice('ID must be a number');
 				el.createEl('pre', {text: 'ID must be a number'});
 				return;
+			}
+
+			let query;
+
+			if (source.includes('#qj-query:')) {
+				query = source.match(/#qj-query: (.+)/)[1];
+				query = parseQuery(query);
 			}
 
 			let desc;
@@ -48,7 +56,13 @@ export default class QJSON extends Plugin {
 			}
 
 			const json = JSON.parse(source);
-			el.createEl('pre', {text: JSON.stringify(json, null, 2), cls: 'QJSON-'+id+' cdQjson '+showJson});
+
+			if (query) {
+				const result = executeQuery(json, query);
+				el.createEl('pre', {text: JSON.stringify(result, null, 2), cls: 'QJSON-'+id+' cdQjson '+showJson});
+			} else {
+				el.createEl('pre', {text: JSON.stringify(json, null, 2), cls: 'QJSON-'+id+' cdQjson '+showJson});
+			}
 
 			qjCount = document.querySelectorAll('.cdQjson').length;
 			statusBarItemEl.setText('QJSON: ' + qjCount);
