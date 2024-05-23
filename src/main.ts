@@ -31,6 +31,13 @@ export default class QJSON extends Plugin {
 				query = parseQuery(query);
 			}
 
+      let format;
+
+      if (source.includes('#qj-format:')) {
+        const validFormat = ["list", "table", "img"]
+        format = source.match(/#qj-format: (.+)/)[1];
+      }
+
 			let desc;
 
 			if (!source.includes('#qj-hide-id')) {
@@ -59,7 +66,43 @@ export default class QJSON extends Plugin {
 
 			if (query) {
 				const result = executeQuery(json, query);
-				el.createEl('pre', {text: JSON.stringify(result, null, 2), cls: 'QJSON-'+id+' cdQjson '+showJson});
+
+        if (format && query[query.length - 1].type === "field") {
+         if (format === "list") {
+              const ul = el.createEl('ul');
+              if (typeof result === 'string') {
+                  ul.createEl('li', { text: result });
+              } else {
+                  for (let i = 0; i < result.length; i++) {
+                      ul.createEl('li', { text: JSON.stringify(result[i], null, 2) });
+                  }
+              }
+          } else if (format === "table") {
+              const table = el.createEl('table');
+              const tbody = table.createEl('tbody');
+              if (typeof result === 'object') {
+                  for (const key in result) {
+                      const tr = tbody.createEl('tr');
+                      tr.createEl('th', { text: key });
+                      tr.createEl('td', { text: JSON.stringify(result[key], null, 2) });
+                  }
+              } else {
+                  const tr = tbody.createEl('tr');
+                  tr.createEl('td', { text: result });
+              }
+          } else if (format === "img") {
+              if (typeof result === 'string') {
+                  el.createEl('img', { attr: { src: result } });
+              } else {
+                  for (let i = 0; i < result.length; i++) {
+                    el.createEl('img', { attr: { src: result[i], width: 100, height: 100 } });
+                  }
+              }
+          }
+          return;
+      }
+
+			 el.createEl('pre', {text: JSON.stringify(result, null, 2), cls: 'QJSON-'+id+' cdQjson '+showJson});
 			} else {
 				el.createEl('pre', {text: JSON.stringify(json, null, 2), cls: 'QJSON-'+id+' cdQjson '+showJson});
 			}
