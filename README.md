@@ -130,6 +130,14 @@ This flag allows you to query the JSON file directly from your codeblock. The qu
 > [!NOTE]
 > The `#qj-show-json` flag is mandatory when using the `#qj-query` flag.
 
+### `#qj-format` (optional)
+
+This flag allows you to format the output of the JSON data. The supported values are:
+
+- `list`: displays the data in a list format
+- `table`: displays the data in a table format
+- `img`: displays the data as an image
+
 ## 🛠️ Contribution
 
 If you encounter any issues or have suggestions for improvement, please feel free to contribute to the project. Your feedback is invaluable in enhancing the plugin's functionality and user experience.
