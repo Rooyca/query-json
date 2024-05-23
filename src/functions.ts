@@ -53,18 +53,13 @@ function parseSingleCondition(condition) {
 
 export function executeQuery(json, parsedQuery) {
     let result = json;
-<<<<<<< HEAD
     let finalResult;
-=======
-    let finalResult = result; // Initialize finalResult to the full dataset initially
->>>>>>> 96ead1c1b9b86e71df8787a7cad381970ff8caad
 
     parsedQuery.forEach(part => {
         if (part.type === 'field') {
             result = result[part.name];
         } else if (part.type === 'filter') {
             const { conditions, operators } = parseCondition(part.condition);
-<<<<<<< HEAD
             const filteredResult = result[part.field].filter(item => {
                 return evaluateConditions(item, conditions, operators);
             });
@@ -90,17 +85,6 @@ export function executeQuery(json, parsedQuery) {
         console.error(e);
         // Handle any potential errors during mapping
         return finalResult;
-=======
-            result = result[part.field];
-            finalResult = result.filter(item => {
-                return evaluateConditions(item, conditions, operators);
-            });
-        }
-    });
-
-    if (parsedQuery.length > 0 && parsedQuery[parsedQuery.length - 1].type === 'field') {
-        finalResult = finalResult.map(item => item[parsedQuery[parsedQuery.length - 1].name]);
->>>>>>> 96ead1c1b9b86e71df8787a7cad381970ff8caad
     }
 
     return finalResult;
