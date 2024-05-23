@@ -31,6 +31,7 @@ export default class QJSON extends Plugin {
 				query = parseQuery(query);
 			}
 
+
       let format;
 
       if (source.includes('#qj-format:')) {
