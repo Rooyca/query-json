@@ -25,7 +25,6 @@ To utilize QJSON, simply include the plugin's syntax within your note, encapsula
 #qj-file: data.json
 #qj-hide-id
 #qj-show-json
-#qj-desc: -> Test data <-
 ```
 ~~~
 
