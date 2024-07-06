@@ -6,8 +6,15 @@ export default class QJSON extends Plugin {
 	async onload() {
 		const statusBarItemEl = this.addStatusBarItem();
 		let qjCount;
-		qjCount = document.querySelectorAll('.cdQjson').length;
-		statusBarItemEl.setText('QJSON: ' + qjCount);
+
+		function updateStatusBarCounter() {
+			qjCount = document.querySelectorAll('.cdQjson').length;
+			statusBarItemEl.setText('QJSON: ' + qjCount);
+		}
+
+		this.registerEvent(this.app.workspace.on('file-open', () => {
+			updateStatusBarCounter();
+		}));
 
 		this.registerMarkdownCodeBlockProcessor("qjson", async (source, el) => {
 			if (!source.includes('#qj-id:')) {
@@ -128,8 +135,7 @@ export default class QJSON extends Plugin {
 				el.createEl('pre', { text: JSON.stringify(json, null, 2), cls: 'QJSON-' + id + ' cdQjson ' + showJson });
 			}
 
-			qjCount = document.querySelectorAll('.cdQjson').length;
-			statusBarItemEl.setText('QJSON: ' + qjCount);
+			updateStatusBarCounter();
 		});
 
 		this.registerEvent(this.app.workspace.on('editor-change', async (editor) => {
