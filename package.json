@@ -1,6 +1,6 @@
 {
 	"name": "query-json",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Read, query and work with JSON.",
 	"main": "main.js",
 	"scripts": {

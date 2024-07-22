@@ -75,6 +75,18 @@ It's also posible to query the file directly using the `#qj-query` flag:
 ```
 ~~~
 
+If you want to get all the elements of an array you can use the `*` wildcard:
+
+~~~markdown
+```qjson
+#qj-id: 24
+#qj-file: data.json
+#qj-show-json
+#qj-hide-id
+#qj-query: pageProps.heroData[*]
+```
+~~~
+
 ## 🏳️ Flags
 
 Query JSON supports various flags to enhance customization and functionality:

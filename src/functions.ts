@@ -41,7 +41,7 @@ function parseCondition(condition) {
 }
 
 function parseSingleCondition(condition) {
-    const comparisonOperators = ['>=', '<=', '==', '>', '<', '!='];
+    const comparisonOperators = ['>=', '<=', '==', '>', '<', '!=', '*'];
     for (let operator of comparisonOperators) {
         if (condition.includes(operator)) {
             const [key, value] = condition.split(operator).map(s => s.trim());
@@ -108,8 +108,10 @@ function evaluateConditions(item, conditions, operators) {
 }
 
 function evaluateCondition(item, condition) {
+    console.log(item)
     const { key, operator, value } = condition;
     switch (operator) {
+        case '*': return true;
         case '>=': return item[key] >= Number(value);
         case '<=': return item[key] <= Number(value);
         case '==': return item[key] == value;

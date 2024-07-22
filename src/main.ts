@@ -93,7 +93,9 @@ export default class QJSON extends Plugin {
 			const json = JSON.parse(source);
 
 			if (query) {
+				console.log(query);
 				const result = executeQuery(json, query);
+				console.log(result);
 
 				if (format && query[query.length - 1].type === "field") {
 					if (format === "list") {
