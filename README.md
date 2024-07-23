@@ -101,7 +101,7 @@ This flag suppresses the display of the identifier after rendering.
 
 #### `#qj-desc` (optional)
 
-Short for "id description," this flag provides a way to describe the JSON object. It is particularly useful for identifying the purpose of the object. The default value is `»»» Query JSON «««`.
+Short for "id description," this flag provides a way to describe the JSON object. It is particularly useful for identifying the purpose of the object. The default value is `»»» QJSON «««`.
 
 #### `#qj-show-json` (optional)
 

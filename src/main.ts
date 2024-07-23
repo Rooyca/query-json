@@ -67,7 +67,7 @@ export default class QJSON extends Plugin {
 					desc = source.match(/#qj-desc: (.+)/);
 					if (desc) desc = desc[1];
 				} catch (e) {
-					desc = "»»» Query JSON «««";
+					desc = "»»» QJSON «««";
 				}
 				el.createEl('h3', { text: desc!, cls: 'centerQJtext' });
 				el.createEl('h4', { text: "ID: " + id, cls: 'centerQJtext' });
@@ -93,9 +93,7 @@ export default class QJSON extends Plugin {
 			const json = JSON.parse(source);
 
 			if (query) {
-				console.log(query);
 				const result = executeQuery(json, query);
-				console.log(result);
 
 				if (format && query[query.length - 1].type === "field") {
 					if (format === "list") {
@@ -143,17 +141,16 @@ export default class QJSON extends Plugin {
 		this.registerEvent(this.app.workspace.on('editor-change', async (editor) => {
 			const cursor = editor.getCursor();
 			const line = editor.getLine(cursor.line);
-
 			const lastChar = line[line.length - 1];
 
 			const match = line.match(/@(.+)>(.+)|@(.+)>/);
 			if (!match) return;
 
-			if (lastChar !== ';' && lastChar !== '.' && lastChar !== '>') return;
+			if (lastChar !== ';' && lastChar !== '.' && lastChar !== '>' && lastChar !== ']') return;
 
 			const id = match[1] || match[3];
 			let path = "";
-		  
+
 			if (match[2] !== undefined) {
 				path = match[2].slice(0, -1).replace(/>/, '')
 			}
@@ -168,13 +165,14 @@ export default class QJSON extends Plugin {
 				json = JSON.parse(await this.app.vault.adapter.read(id));
 			}
 
-			const value = getJSONPath(json, path);
+			path = path.replace(/\*/g, '').replace(/\[\]/g, '');
+			let value = getJSONPath(json, path);
 
 			if (lastChar !== ';') {
 				if (value !== undefined) {
 					const notice = document.querySelector('.notice');
 					if (notice) notice.remove();
-			  	
+
 					const keys = Object.keys(value);
 					const keysAreNumbers = keys.every(key => !isNaN(parseInt(key)));
 
@@ -187,6 +185,23 @@ export default class QJSON extends Plugin {
 					}
 				} 
 			} else {
+				if (line.includes('[*]')) {
+					const temp_data = [];
+					const arrayMatch = line.match(/(.+)\[\*\](?:\.(\w+))?/);
+					if (arrayMatch) {
+						const arrayKey = arrayMatch[1].slice(arrayMatch[1].indexOf('>') + 1);
+						const property = arrayMatch[2];
+						const arrayElements = getJSONPath(json, arrayKey);
+						for (let i = 0; i < arrayElements.length; i++) {
+							if (property) {
+								temp_data.push(arrayElements[i][property]);
+							} else {
+								temp_data.push(arrayElements[i]);
+							}
+						}
+					}
+					value = temp_data;
+				}
 				const atIndex = line.indexOf('@');
 				const replaceEnd = { line: cursor.line, ch: line.length }; // Replace to end of line
 				const stringValue = typeof value === 'string' ? value : JSON.stringify(value);

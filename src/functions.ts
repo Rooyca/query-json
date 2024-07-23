@@ -108,7 +108,6 @@ function evaluateConditions(item, conditions, operators) {
 }
 
 function evaluateCondition(item, condition) {
-    console.log(item)
     const { key, operator, value } = condition;
     switch (operator) {
         case '*': return true;
