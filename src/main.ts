@@ -51,7 +51,7 @@ export default class QJSON extends Plugin {
 			let selectedFields;
 
 			if (source.includes('#qj-format:')) {
-				format = source.match(/^#qj-format: ([^\[\n\r ]+)(?:\s*\[([^\]\n\r]+)\])?$/m);
+				format = source.match(/^#qj-format: ([^\[\n\r ]+)(?:[\t\f ]*\[([^\]\n\r]+)\])?$/m);
 				if (format) {
 					if (format[2]) {
 						const formats = format[2].split(",");
@@ -229,6 +229,24 @@ export default class QJSON extends Plugin {
 						el.createEl('pre', { text: 'Table & list can only be created from array' });
 						return;
 					}
+					if (!selectedFields && result.length > 0) {
+						// just use all fields from the first element
+						if (Array.isArray(result[0]) || typeof result[0] !== 'object') {
+							result = [{entry: result}];
+						}
+						selectedFields = Object.entries(result[0]).map(([k,v],i) => {return {
+								header: false,
+								bold: false,
+								comma: false,
+								br: false,
+								link: false,
+								name: null,
+								field: k,
+								field2: null
+							};
+						});
+					}
+					console.log(selectedFields, result);
 					let oEl;
 					let titleNum = 1;
 					if (format === "list") {
