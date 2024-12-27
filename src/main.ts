@@ -140,8 +140,12 @@ export default class QJSON extends Plugin {
 					el.createEl('pre', { text: 'No file given' });
 					return;
 				}
+			} else {
+				console.log(source);
+				source = source.replace(/^#qj-[a-z]+: .*$/gm, "");
+				console.log(source);
 			}
-
+			
 			const json = JSON.parse(source);
 
 			let result = json;
