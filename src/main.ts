@@ -51,17 +51,17 @@ export default class QJSON extends Plugin {
 			let selectedFields;
 
 			if (source.includes('#qj-format:')) {
-				format = source.match(/^#qj-format: ([^\[\n\r ]+)(?:[\t\f ]*\[([^\]\n\r]+)\])?$/m);
+				format = source.match(/^#qj-format: ([^\[\n\r ]+)[\t\f ]*(?:\[((?:[^\]\n\r=:,\"]*:(?:[^\]\n\r=:,\"]+|"[^\"]+")(?::[^\]\n\r=,]+)?(?:=[^\]\n\r,]+)?(?:,[^\n\r\w]*)?)+)\])?$/m);
 				if (format) {
 					if (format[2]) {
-						const formats = format[2].split(",");
+						const formats = format[2].split(/(?<=[^\]\n\r=:,\"]*:(?:[^\]\n\r=:,\"]+|"[^\"]+")(?::[^\]\n\r=,]+)?(?:=[^\]\n\r,]+)?)[\t\f ]*,/);
 						selectedFields = formats.map(f => {
-							const fsplit = f.split(':');
-							const hsplit = fsplit[0].split('=', 2);
-							const flags = hsplit[0];
-							const name = hsplit[1] || null;
-							const field = fsplit[1];
-							const field2 = fsplit[2] || null;
+							const fParts = f.match(/^([^\]\n\r=:,\"]*):(?:([^\]\n\r=:,\"]+)|"([^\"]+)")(?::([^\]\n\r=,]+))?(?:=([^\]\n\r,]+))?$/);
+							const flags = fParts[1];
+							const name = fParts[5] || null;
+							const field = fParts[2] || null;
+							const template = fParts[3] || null;
+							const field2 = fParts[4] || null;
 							return {
 								header: flags.includes('h'),
 								bold: flags.includes('b'),
@@ -70,6 +70,7 @@ export default class QJSON extends Plugin {
 								link: flags.includes('l'),
 								name: name,
 								field: field,
+								template: template,
 								field2: field2
 							};
 						});
@@ -84,7 +85,7 @@ export default class QJSON extends Plugin {
 									return;
 								}
 							}
-							if (!(sf.field)) {
+							if (!sf.field && !sf.template) {
 								new Notice('Field format is missing field name');
 								el.createEl('pre', { text: 'Field format is missing field name' });
 								return;
@@ -429,13 +430,23 @@ function getJSONPath(json: Object, path: string) {
 	return path.split('.').reduce((acc, key) => acc[key], json);
 }
 
+function formatString(template: string, obj:object): string {
+	return template.replace(/{([^}]+)}/g, (match, name) => {
+		return formatOutput(obj[name]);
+	});
+}
+
 function formatElement(parent: Element, format: Object, json: Object, text?: string) {
 	if (!text) {
-		const textJson = json[format.field];
-		if (Array.isArray(textJson)) {
-			text = textJson.map(j => formatOutput(j));
+		if (format.field) {
+			const textJson = json[format.field];
+			if (Array.isArray(textJson)) {
+				text = textJson.map(j => formatOutput(j));
+			} else {
+				text = formatOutput(textJson);
+			}
 		} else {
-			text = formatOutput(textJson);
+			text = formatString(format.template, json);
 		}
 	}
 
