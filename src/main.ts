@@ -230,10 +230,10 @@ export default class QJSON extends Plugin {
 						return;
 					}
 					if (!selectedFields && result.length > 0) {
-						// just use all fields from the first element
 						if (Array.isArray(result[0]) || typeof result[0] !== 'object') {
-							result = [{entry: result}];
+							result = result.map(e => { return {entry: e};});
 						}
+						// just use all fields from the first element
 						selectedFields = Object.entries(result[0]).map(([k,v],i) => {return {
 								header: false,
 								bold: false,
@@ -246,7 +246,6 @@ export default class QJSON extends Plugin {
 							};
 						});
 					}
-					console.log(selectedFields, result);
 					let oEl;
 					let titleNum = 1;
 					if (format === "list") {
