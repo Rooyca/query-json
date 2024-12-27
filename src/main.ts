@@ -141,16 +141,13 @@ export default class QJSON extends Plugin {
 					return;
 				}
 			} else {
-				console.log(source);
 				source = source.replace(/^#qj-[a-z]+: .*$/gm, "");
-				console.log(source);
 			}
 			
 			const json = JSON.parse(source);
 
 			let result = json;
 			let fieldResult;
-			console.log(result, format, selectedFields);
 
 			if (query) {
 				result = executeQuery(json, query);
@@ -158,7 +155,6 @@ export default class QJSON extends Plugin {
 			} else {
 				fieldResult = !Array.isArray(result);
 			}
-			console.log(result, fieldResult);
 
 			if (!format || format === "json") {
 				el.createEl('pre', { text: JSON.stringify(result, null, 2), cls: 'QJSON-' + id + ' cdQjson ' + showJson });
@@ -240,7 +236,6 @@ export default class QJSON extends Plugin {
 							formatElement(el, selectedFields[0], null, selectedFields[0].name);
 						}
 						oEl = el.createEl('ul', { attr:{ style:"list-style-position: outside;"}});
-						console.log(el, oEl);
 					} else if (format === "table") {
 						const table = el.createEl('table');
 						const thead = table.createEl('thead');
