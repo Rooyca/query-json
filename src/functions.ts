@@ -19,7 +19,7 @@ export function parseQuery(query) {
         if (first) {
             first = false;
         } else {
-            if (!q.field) {
+            if (q.type === "filter" && !q.field) {
                 throw Error(`Filter without field: ${query}`);
             }
         }
