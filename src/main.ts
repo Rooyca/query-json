@@ -95,6 +95,11 @@ export default class QJSON extends Plugin {
 								el.createEl('pre', { text: 'Field format link is missing second field name' });
 								return;
 							}
+							if (sf.template && !sf.name) {
+								new Notice( 'Field format with template must provide name');
+								el.createEl('pre', { text: 'Field format with template must provide name' });
+								return;
+							}
 						}
 					}
 					format = format[1];
