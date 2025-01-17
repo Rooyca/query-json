@@ -138,8 +138,30 @@ This flag allows you to query the JSON file directly from your codeblock. The qu
 This flag allows you to format the output of the JSON data. The supported values are:
 
 - `list`: displays the data in a list format
-- `table`: displays the data in a table format
+- `table`: displays the data in a table format (see below)
 - `img`: displays the data as an image
+
+#### Improved **Table** Data Display (Thanks to [@ozppupbg](https://github.com/ozppupbg))
+
+Add column formatting:
+
+`#qj-format: table[<flags>:<field or template>:<link field>=<custom name>,<flags>:<field or template>:<link field>=<custom name>,...]`
+
+For example:
+
+`#qj-format: table[h:title=Name,:value,b:test=Value 2]`
+
+With a template:
+
+`#qj-format: table[:"Custom {value} of {test}"=Something]`
+
+The following flags are implemented:
+
+- **b**: display bold
+- **h**: header column/field (only allowed in the first entry)
+- **l**: create a link - a second field name must be provided, which contains the link URL
+- **c**: if a list of values is the content, use comma separation for the entries
+- **n**: if a list of values is the content, use new-line/separation for the entries
 
 ## 🛠️ Contribution
 
