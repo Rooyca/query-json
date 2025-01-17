@@ -1,7 +1,7 @@
 export function parseQuery(query) {
     const parts = query.split('.');
-    return parts.map(part => {
-        const match = part.match(/(\w+)\[(.*)\]/);
+    const parsed = parts.map(part => {
+        const match = part.match(/(\w*)\[(.*)\]/);
         if (match) {
             return {
                 type: 'filter',
@@ -14,6 +14,17 @@ export function parseQuery(query) {
             name: part
         };
     });
+    let first = true;
+    for (const q of parsed) {
+        if (first) {
+            first = false;
+        } else {
+            if (q.type === "filter" && !q.field) {
+                throw Error(`Filter without field: ${query}`);
+            }
+        }
+    }
+    return parsed;
 }
 
 function parseCondition(condition) {
@@ -60,7 +71,11 @@ export function executeQuery(json, parsedQuery) {
             result = result[part.name];
         } else if (part.type === 'filter') {
             const { conditions, operators } = parseCondition(part.condition);
-            const filteredResult = result[part.field].filter(item => {
+            let arr = result;
+            if (part.field) {
+                arr = result[part.field];
+            }
+            const filteredResult = arr.filter(item => {
                 return evaluateConditions(item, conditions, operators);
             });
             // Store the filtered result in finalResult
