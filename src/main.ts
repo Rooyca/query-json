@@ -133,13 +133,12 @@ export default class QJSON extends Plugin {
 				const file = source.match(/^#qj-file: ([^\n\r]+)$/m);
 				if (file) {
 					try {
+						//console.log(this.app.workspace.getActiveFile().parent.path);
 						// Code that might throw an error
 						source = await this.app.vault.adapter.read(file[1]);
-					} catch (error) {
-						console.error('File load error:', error);
-						new Notice("file not found");
-						el.createEl('pre', { text: 'File not found' });
-						return;
+					} catch {
+						const filePath = this.app.workspace.getActiveFile().parent.path + '/';
+						source = await this.app.vault.adapter.read(filePath + file[1]);
 					}
 				} else {
 					new Notice('No file given');
