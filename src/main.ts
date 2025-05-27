@@ -146,7 +146,7 @@ export default class QJSON extends Plugin {
 					return;
 				}
 			} else {
-				source = source.replace(/^#qj-[a-z]+: .*$/gm, "");
+				source = source.replace(/^#qj-[a-z]+(: )?.*$/gm, "");
 			}
 			
 			const json = JSON.parse(source);
