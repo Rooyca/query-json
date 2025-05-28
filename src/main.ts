@@ -115,7 +115,7 @@ export default class QJSON extends Plugin {
 			if (!source.includes('#qj-hide-id')) {
 				try {
 					desc = source.match(/^#qj-desc: ([^\n\r]+)$/m);
-					if (desc) desc = desc[1];
+					desc = desc[1] ?? "»»» QJSON «««";
 				} catch (e) {
 					desc = "»»» QJSON «««";
 				}
