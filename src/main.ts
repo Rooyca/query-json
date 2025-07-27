@@ -43,6 +43,15 @@ export default class QJSON extends Plugin {
 					el.createEl('pre', { text: 'No query found' });
 					return;
 				}
+
+				// Parsing properties
+				let properties = app.metadataCache.getFileCache(this.app.workspace.getActiveFile());
+				if (properties && properties.frontmatter) {
+					for (const key in properties.frontmatter) {
+						query = query.replace(new RegExp(`{this.${key}}`, 'g'), properties.frontmatter[key]);
+					}
+				}
+
 				query = parseQuery(query);
 			}
 

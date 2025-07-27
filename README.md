@@ -87,6 +87,18 @@ If you want to get all the elements of an array you can use the `*` wildcard:
 ```
 ~~~
 
+For using properties we use `{this.PROPERTIE}`:
+
+~~~markdown
+```qjson
+#qj-id: 24
+#qj-file: data.json
+#qj-show-json
+#qj-hide-id
+#qj-query: pageProps.heroData.{this.name}
+```
+~~~
+
 ## 🏳️ Flags
 
 Query JSON supports various flags to enhance customization and functionality:
