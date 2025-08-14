@@ -51,6 +51,7 @@ export default class QJSON extends Plugin {
 						query = query.replace(new RegExp(`{this.${key}}`, 'g'), properties.frontmatter[key]);
 					}
 				}
+				console.log(query);
 
 				query = parseQuery(query);
 			}

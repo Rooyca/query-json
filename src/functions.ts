@@ -1,19 +1,42 @@
 export function parseQuery(query) {
     const parts = query.split('.');
     const parsed = parts.map(part => {
-        const match = part.match(/(\w*)\[(.*)\]/);
-        if (match) {
+        // Check for multi-field selection: {field1,field2,field3}
+        const multiFieldMatch = part.match(/^\{([^}]+)\}$/);
+        if (multiFieldMatch && multiFieldMatch[1].includes(',')) {
+            const fields = multiFieldMatch[1].split(',').map(f => f.trim());
             return {
-                type: 'filter',
-                field: match[1],
-                condition: match[2]
+                type: 'multiField',
+                fields: fields
             };
         }
+        
+        // Check for filter: field[condition] or [condition]
+        const filterMatch = part.match(/(\w*)\[(.*)\]/);
+        if (filterMatch) {
+            return {
+                type: 'filter',
+                field: filterMatch[1] || null,
+                condition: filterMatch[2]
+            };
+        }
+        
+        // Check if it's a numeric index
+        if (/^\d+$/.test(part)) {
+            return {
+                type: 'index',
+                index: parseInt(part)
+            };
+        }
+        
+        // Regular field access
         return {
             type: 'field',
             name: part
         };
     });
+    
+    // Validation
     let first = true;
     for (const q of parsed) {
         if (first) {
@@ -31,22 +54,25 @@ function parseCondition(condition) {
     const logicalOperators = ['&&', '||'];
     let conditions = [];
     let operators = [];
+    let currentCondition = condition;
 
-    let remainingCondition = condition;
-    logicalOperators.forEach(operator => {
-        if (remainingCondition.includes(operator)) {
-            const parts = remainingCondition.split(operator).map(s => s.trim());
-            conditions.push(parseSingleCondition(parts[0]));
+    // Parse logical operators sequentially
+    for (const operator of logicalOperators) {
+        while (currentCondition.includes(operator)) {
+            const operatorIndex = currentCondition.indexOf(operator);
+            const leftPart = currentCondition.substring(0, operatorIndex).trim();
+            
+            if (conditions.length === 0) {
+                conditions.push(parseSingleCondition(leftPart));
+            }
+            
             operators.push(operator);
-            remainingCondition = parts[1];
+            currentCondition = currentCondition.substring(operatorIndex + operator.length).trim();
         }
-    });
-
-    if (conditions.length === 0) {
-        conditions.push(parseSingleCondition(remainingCondition));
-    } else {
-        conditions.push(parseSingleCondition(remainingCondition));
     }
+
+    // Add the final condition
+    conditions.push(parseSingleCondition(currentCondition));
 
     return { conditions, operators };
 }
@@ -64,48 +90,66 @@ function parseSingleCondition(condition) {
 
 export function executeQuery(json, parsedQuery) {
     let result = json;
-    let finalResult;
 
-    parsedQuery.forEach(part => {
+    for (let i = 0; i < parsedQuery.length; i++) {
+        const part = parsedQuery[i];
+        
         if (part.type === 'field') {
-            result = result[part.name];
+            if (Array.isArray(result)) {
+                result = result.map(item => item[part.name]).filter(item => item !== undefined);
+            } else if (result && typeof result === 'object') {
+                result = result[part.name];
+            }
+        } else if (part.type === 'index') {
+            if (Array.isArray(result)) {
+                result = result[part.index];
+            } else {
+                return undefined; // Can't index into non-array
+            }
+        } else if (part.type === 'multiField') {
+            if (Array.isArray(result)) {
+                // Extract multiple fields from each item in the array
+                result = result.map(item => {
+                    const extracted = {};
+                    part.fields.forEach(field => {
+                        if (item && item.hasOwnProperty(field)) {
+                            extracted[field] = item[field];
+                        }
+                    });
+                    return extracted;
+                });
+            } else if (result && typeof result === 'object') {
+                // Extract multiple fields from a single object
+                const extracted = {};
+                part.fields.forEach(field => {
+                    if (result.hasOwnProperty(field)) {
+                        extracted[field] = result[field];
+                    }
+                });
+                result = extracted;
+            }
         } else if (part.type === 'filter') {
             const { conditions, operators } = parseCondition(part.condition);
-            let arr = result;
+            let arrayToFilter = result;
+            
             if (part.field) {
-                arr = result[part.field];
+                arrayToFilter = result[part.field];
             }
-            const filteredResult = arr.filter(item => {
-                return evaluateConditions(item, conditions, operators);
-            });
-            // Store the filtered result in finalResult
-            if (!finalResult) {
-                finalResult = filteredResult;
-            } else {
-                // Merge the filtered result with finalResult
-                finalResult = finalResult.concat(filteredResult);
+            
+            if (Array.isArray(arrayToFilter)) {
+                result = arrayToFilter.filter(item => {
+                    return evaluateConditions(item, conditions, operators);
+                });
             }
         }
-    });
-
-    // If no filter conditions were applied, finalResult will be undefined, so set it to the original result
-    finalResult = finalResult || result;
-
-    try {
-        if (parsedQuery.length > 0 && parsedQuery[parsedQuery.length - 1].type === 'field') {
-            // Map only the required field from finalResult if the last part of the query is a 'field' type
-            finalResult = finalResult.map(item => item[parsedQuery[parsedQuery.length - 1].name]);
-        }
-    } catch (e) {
-        console.error(e);
-        // Handle any potential errors during mapping
-        return finalResult;
     }
 
-    return finalResult;
+    return result;
 }
 
 function evaluateConditions(item, conditions, operators) {
+    if (conditions.length === 0) return true;
+    
     let result = evaluateCondition(item, conditions[0]);
 
     for (let i = 0; i < operators.length; i++) {
@@ -124,14 +168,25 @@ function evaluateConditions(item, conditions, operators) {
 
 function evaluateCondition(item, condition) {
     const { key, operator, value } = condition;
+    const itemValue = item[key];
+    
     switch (operator) {
-        case '*': return true;
-        case '>=': return item[key] >= Number(value);
-        case '<=': return item[key] <= Number(value);
-        case '==': return item[key] == value;
-        case '>': return item[key] > Number(value);
-        case '<': return item[key] < Number(value);
-        case '!=': return item[key] != value;
-        default: return false;
+        case '*': 
+            return true;
+        case '>=': 
+            return Number(itemValue) >= Number(value);
+        case '<=': 
+            return Number(itemValue) <= Number(value);
+        case '==': 
+            return itemValue == value;
+        case '>': 
+            return Number(itemValue) > Number(value);
+        case '<': 
+            return Number(itemValue) < Number(value);
+        case '!=': 
+            return itemValue != value;
+        default: 
+            return false;
     }
 }
+

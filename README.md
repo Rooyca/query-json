@@ -99,6 +99,18 @@ For using properties we use `{this.PROPERTIE}`:
 ```
 ~~~
 
+To get multiple values we can use `{VAL1, VAL2, ...}`
+
+~~~markdown
+```qjson
+#qj-id: 24
+#qj-file: data.json
+#qj-show-json
+#qj-hide-id
+#qj-query: pageProps.heroData.{name, id, img}
+```
+~~~
+
 ## 🏳️ Flags
 
 Query JSON supports various flags to enhance customization and functionality:
