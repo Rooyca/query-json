@@ -1,20 +1,46 @@
 import { Notice, Plugin } from 'obsidian';
-import { parseQuery, executeQuery } from './functions';
+import { parseQuery, formatString, executeQuery, formatOutput, getJSONPath } from './functions';
 
 export default class QJSON extends Plugin {
+	private statusBarItemEl: HTMLElement;
+	private qjsonBlockCount: number = 0;
+	private countTimeout: NodeJS.Timeout | null = null;
 
 	async onload() {
-		const statusBarItemEl = this.addStatusBarItem();
-		let qjCount;
+		this.statusBarItemEl = this.addStatusBarItem();
+		this.statusBarItemEl.setText('');
 
-		function updateStatusBarCounter() {
-			qjCount = document.querySelectorAll('.cdQjson').length;
-			qjCount++;
-			statusBarItemEl.setText(qjCount + ' qjson');
-		}
+		// Update counter when file opens
+		this.registerEvent(this.app.workspace.on('file-open', async (file) => {
+			this.qjsonBlockCount = 0;
+			if (file) {
+				await this.countQjsonBlocks();
+			} else {
+				// No file open, hide counter
+				this.statusBarItemEl.setText('');
+			}
+		}));
 
-		this.registerEvent(this.app.workspace.on('file-open', () => {
-			updateStatusBarCounter();
+		// Update counter when active leaf changes (switching between tabs)
+		this.registerEvent(this.app.workspace.on('active-leaf-change', async () => {
+			const activeFile = this.app.workspace.getActiveFile();
+			if (activeFile) {
+				this.qjsonBlockCount = 0;
+				await this.countQjsonBlocks();
+			} else {
+				this.statusBarItemEl.setText('');
+			}
+		}));
+
+		// Update counter when document is edited
+		this.registerEvent(this.app.workspace.on('editor-change', async (editor) => {
+			// Debounce the counting to avoid excessive updates while typing
+			if (this.countTimeout) {
+				clearTimeout(this.countTimeout);
+			}
+			this.countTimeout = setTimeout(async () => {
+				await this.countQjsonBlocks();
+			}, 1000);
 		}));
 
 		this.registerMarkdownCodeBlockProcessor("qjson", async (source, el) => {
@@ -144,8 +170,6 @@ export default class QJSON extends Plugin {
 				const file = source.match(/^#qj-file: ([^\n\r]+)$/m);
 				if (file) {
 					try {
-						//console.log(this.app.workspace.getActiveFile().parent.path);
-						// Code that might throw an error
 						source = await this.app.vault.adapter.read(file[1]);
 					} catch {
 						const filePath = this.app.workspace.getActiveFile().parent.path + '/';
@@ -323,7 +347,7 @@ export default class QJSON extends Plugin {
 				//return;
 			}
 
-			updateStatusBarCounter();
+			this.qjsonBlockCount++;
 		});
 
 		this.registerEvent(this.app.workspace.on('editor-change', async (editor) => {
@@ -397,59 +421,59 @@ export default class QJSON extends Plugin {
 			}
 		}));
 
-		// this.registerMarkdownPostProcessor( async (element, context) => {
-		//   const codeblocks = element.findAll("code");
+	}
+	private async countQjsonBlocks() {
+		const activeFile = this.app.workspace.getActiveFile();
+		if (!activeFile) {
+			this.statusBarItemEl.setText('');
+			return;
+		}
 
-		//   for (let codeblock of codeblocks) {
-		//     if (codeblock.classList.length >= 1) return;
+		try {
+			const content = await this.app.vault.read(activeFile);
 
-		//     const text = codeblock.innerText;
-		//     const regex = /@(.+)\.json>(.+);/;
-		//     const match = text.match(regex);
+			// Match all qjson code blocks with #qj-id: number
+			const qjsonBlockRegex = /```qjson[\s\S]*?#qj-id:\s*(\d+)/g;
+			const matches = content.matchAll(qjsonBlockRegex);
 
-		//     if (match) {
-		//       let result;
+			const ids = new Set<string>();
+			const duplicateIds = new Set<string>();
 
-		//       try {
-		//         let file = await this.app.vault.adapter.read(match[1] + ".json");
-		//         file = JSON.parse(file);
-		//         result = getJSONPath(file, match[2]);
-		//       } catch (e) {
-		//         console.error(e);
-		//         new Notice("Error! Something went wrong!");
-		//         result = "Error!";
-		//       }
+			for (const match of matches) {
+				const id = match[1];
+				if (ids.has(id)) {
+					duplicateIds.add(id);
+				} else {
+					ids.add(id);
+				}
+			}
 
-		//       let stringResult;
-		//       let tagName;
+			// Show duplicates warning
+			if (duplicateIds.size > 0) {
+				new Notice(`Duplicate QJSON IDs found: ${Array.from(duplicateIds).join(', ')}`);
+			}
 
-		//       if (typeof result === "string" || typeof result === "number" || typeof result === "boolean") {
-		//         stringResult = result;
-		//         tagName = "span";
-		//       } else {
-		//         stringResult = JSON.stringify(result, null, 2);
-		//         tagName = "pre";
-		//       }
+			// Only count unique IDs
+			const uniqueCount = ids.size;
 
-		//       const resultEl = codeblock.createEl(tagName, {text: stringResult});
-		//       codeblock.replaceWith(resultEl);
-		//     }
-		//   }
-		// });
+			// Update status bar
+			if (uniqueCount > 0) {
+				this.statusBarItemEl.setText(`${uniqueCount} qjson`);
+			} else {
+				this.statusBarItemEl.setText('');
+			}
+		} catch (error) {
+			console.error('Error counting QJSON blocks:', error);
+			this.statusBarItemEl.setText('');
+		}
 	}
 
+	onunload() {
+		this.qjsonBlockCount = 0;
+		this.statusBarItemEl.setText('');
+	}
 }
 
-function getJSONPath(json: Object, path: string) {
-	if (path === '') return json;
-	return path.split('.').reduce((acc, key) => acc[key], json);
-}
-
-function formatString(template: string, obj:object): string {
-	return template.replace(/{([^}]+)}/g, (match, name) => {
-		return formatOutput(obj[name]);
-	});
-}
 
 function formatElement(parent: Element, format: Object, json: Object, text?: string) {
 	if (!text) {
@@ -500,10 +524,3 @@ function formatElement(parent: Element, format: Object, json: Object, text?: str
 	}
 }
 
-function formatOutput(json: Object) {
-	if (typeof json === 'string') {
-		return json;
-	} else {
-		return  JSON.stringify(json, null, 2);
-	}
-}

@@ -190,3 +190,24 @@ function evaluateCondition(item, condition) {
     }
 }
 
+export function formatOutput(json: Object) {
+	if (typeof json === 'string') {
+		return json;
+	} else {
+		return  JSON.stringify(json, null, 2);
+	}
+}
+
+export function getJSONPath(json: Object, path: string) {
+	if (path === '') return json;
+	return path.split('.').reduce((acc, key) => acc[key], json);
+}
+
+export function formatString(template: string, obj:object): string {
+	return template.replace(/{([^}]+)}/g, (match, name) => {
+		return formatOutput(obj[name]);
+	});
+}
+
+
+
