@@ -9,7 +9,8 @@ export default class QJSON extends Plugin {
 
 		function updateStatusBarCounter() {
 			qjCount = document.querySelectorAll('.cdQjson').length;
-			statusBarItemEl.setText('QJSON: ' + qjCount);
+			qjCount++;
+			statusBarItemEl.setText(qjCount + ' qjson');
 		}
 
 		this.registerEvent(this.app.workspace.on('file-open', () => {
