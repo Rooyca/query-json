@@ -1,10 +1,22 @@
 import { Notice, Plugin } from 'obsidian';
-import { parseQuery, formatString, executeQuery, formatOutput, getJSONPath } from './functions';
+import { parseQuery, formatString, executeQuery, formatOutput, getJSONPath, QueryPart } from './functions';
+
+interface SelectedField {
+	header: boolean;
+	bold: boolean;
+	comma: boolean;
+	br: boolean;
+	link: boolean;
+	name: string | null;
+	field: string | null;
+	template: string | null;
+	field2: string | null;
+}
 
 export default class QJSON extends Plugin {
 	private statusBarItemEl: HTMLElement;
-	private qjsonBlockCount: number = 0;
 	private countTimeout: NodeJS.Timeout | null = null;
+	private lastDuplicateIds: string = '';
 
 	async onload() {
 		this.statusBarItemEl = this.addStatusBarItem();
@@ -12,7 +24,6 @@ export default class QJSON extends Plugin {
 
 		// Update counter when file opens
 		this.registerEvent(this.app.workspace.on('file-open', async (file) => {
-			this.qjsonBlockCount = 0;
 			if (file) {
 				await this.countQjsonBlocks();
 			} else {
@@ -25,7 +36,6 @@ export default class QJSON extends Plugin {
 		this.registerEvent(this.app.workspace.on('active-leaf-change', async () => {
 			const activeFile = this.app.workspace.getActiveFile();
 			if (activeFile) {
-				this.qjsonBlockCount = 0;
 				await this.countQjsonBlocks();
 			} else {
 				this.statusBarItemEl.setText('');
@@ -49,51 +59,56 @@ export default class QJSON extends Plugin {
 				el.createEl('pre', { text: 'No ID found' });
 				return;
 			}
-			let id;
-			id = source.match(/^#qj-id: (\d+)$/m);
-			if (id) id = id[1];
-			// check if id is a number
-			if (isNaN(parseInt(id))) {
+			const idMatch = source.match(/^#qj-id: (\d+)$/m);
+			const id = idMatch?.[1] ?? null;
+			if (!id || Number.isNaN(Number.parseInt(id, 10))) {
 				new Notice('ID must be a number');
 				el.createEl('pre', { text: 'ID must be a number' });
 				return;
 			}
 
-			let query;
+			let query: QueryPart[] | null = null;
 
 			if (source.includes('#qj-query:')) {
-				query = source.match(/^#qj-query: ([^\n\r]+)$/m);
-				if (query) {
-					query = query[1];
-				} else {
+				const queryMatch = source.match(/^#qj-query: ([^\n\r]+)$/m);
+				let queryText = queryMatch?.[1] ?? null;
+				if (!queryText) {
 					new Notice('No query found');
 					el.createEl('pre', { text: 'No query found' });
 					return;
 				}
 
-				// Parsing properties
-				let properties = app.metadataCache.getFileCache(this.app.workspace.getActiveFile());
+				const activeFile = this.app.workspace.getActiveFile();
+				const properties = activeFile ? this.app.metadataCache.getFileCache(activeFile) : null;
 				if (properties && properties.frontmatter) {
 					for (const key in properties.frontmatter) {
-						query = query.replace(new RegExp(`{this.${key}}`, 'g'), properties.frontmatter[key]);
+						const replacement = String(properties.frontmatter[key]);
+						queryText = queryText.replace(new RegExp(`{this.${key}}`, 'g'), replacement);
 					}
 				}
-				console.log(query);
-
-				query = parseQuery(query);
+				try {
+					query = parseQuery(queryText);
+				} catch (error) {
+					new Notice(`Invalid query: ${error instanceof Error ? error.message : 'unknown error'}`);
+					el.createEl('pre', { text: 'Invalid query' });
+					return;
+				}
 			}
 
 
-			let format;
-			let selectedFields;
+			let format: string | null = null;
+			let selectedFields: SelectedField[] | null = null;
 
 			if (source.includes('#qj-format:')) {
-				format = source.match(/^#qj-format: ([^\[\n\r ]+)[\t\f ]*(?:\[((?:[^\]\n\r=:,\"]*:(?:[^\]\n\r=:,\"]+|"[^\"]+")(?::[^\]\n\r=,]+)?(?:=[^\]\n\r,]+)?(?:,[^\n\r\w]*)?)+)\])?$/m);
-				if (format) {
-					if (format[2]) {
-						const formats = format[2].split(/(?<=[^\]\n\r=:,\"]*:(?:[^\]\n\r=:,\"]+|"[^\"]+")(?::[^\]\n\r=,]+)?(?:=[^\]\n\r,]+)?)[\t\f ]*,/);
-						selectedFields = formats.map(f => {
+				const formatMatch = source.match(/^#qj-format: ([^\[\n\r ]+)[\t\f ]*(?:\[((?:[^\]\n\r=:,\"]*:(?:[^\]\n\r=:,\"]+|"[^\"]+")(?::[^\]\n\r=,]+)?(?:=[^\]\n\r,]+)?(?:,[^\n\r\w]*)?)+)\])?$/m);
+				if (formatMatch) {
+					if (formatMatch[2]) {
+						const formats = formatMatch[2].split(/(?<=[^\]\n\r=:,\"]*:(?:[^\]\n\r=:,\"]+|"[^\"]+")(?::[^\]\n\r=,]+)?(?:=[^\]\n\r,]+)?)[\t\f ]*,/);
+						const mappedFormats = formats.map(f => {
 							const fParts = f.match(/^([^\]\n\r=:,\"]*):(?:([^\]\n\r=:,\"]+)|"([^\"]+)")(?::([^\]\n\r=,]+))?(?:=([^\]\n\r,]+))?$/);
+							if (!fParts) {
+								return null;
+							}
 							const flags = fParts[1];
 							const name = fParts[5] || null;
 							const field = fParts[2] || null;
@@ -111,6 +126,12 @@ export default class QJSON extends Plugin {
 								field2: field2
 							};
 						});
+						if (mappedFormats.some((f) => f === null)) {
+							new Notice('No format found');
+							el.createEl('pre', { text: 'No format found' });
+							return;
+						}
+						selectedFields = mappedFormats as SelectedField[];
 						let first = true;
 						for (const sf of selectedFields) {
 							if (first) {
@@ -139,7 +160,7 @@ export default class QJSON extends Plugin {
 							}
 						}
 					}
-					format = format[1];
+					format = formatMatch[1];
 				} else {
 					new Notice('No format found');
 					el.createEl('pre', { text: 'No format found' });
@@ -147,16 +168,12 @@ export default class QJSON extends Plugin {
 				}
 			}
 
-			let desc;
+			let desc: string | null = null;
 
 			if (!source.includes('#qj-hide-id')) {
-				try {
-					desc = source.match(/^#qj-desc: ([^\n\r]+)$/m);
-					desc = desc[1] ?? "»»» QJSON «««";
-				} catch (e) {
-					desc = "»»» QJSON «««";
-				}
-				el.createEl('h3', { text: desc!, cls: 'centerQJtext' });
+				const descMatch = source.match(/^#qj-desc: ([^\n\r]+)$/m);
+				desc = descMatch?.[1] ?? "»»» QJSON «««";
+				el.createEl('h3', { text: desc, cls: 'centerQJtext' });
 				el.createEl('h4', { text: "ID: " + id, cls: 'centerQJtext' });
 			}
 
@@ -172,8 +189,20 @@ export default class QJSON extends Plugin {
 					try {
 						source = await this.app.vault.adapter.read(file[1]);
 					} catch {
-						const filePath = this.app.workspace.getActiveFile().parent.path + '/';
-						source = await this.app.vault.adapter.read(filePath + file[1]);
+						const activeFile = this.app.workspace.getActiveFile();
+						if (!activeFile || !activeFile.parent) {
+							new Notice('No file open to resolve relative JSON path');
+							el.createEl('pre', { text: 'No file open to resolve relative JSON path' });
+							return;
+						}
+						const filePath = activeFile.parent.path + '/';
+						try {
+							source = await this.app.vault.adapter.read(filePath + file[1]);
+						} catch {
+							new Notice('No file given');
+							el.createEl('pre', { text: 'No file given' });
+							return;
+						}
 					}
 				} else {
 					new Notice('No file given');
@@ -184,20 +213,25 @@ export default class QJSON extends Plugin {
 				source = source.replace(/^#qj-[a-z]+(: )?.*$/gm, "");
 			}
 			
-			const json = JSON.parse(source);
+			let json: unknown;
+			try {
+				json = JSON.parse(source);
+			} catch {
+				new Notice('Invalid JSON');
+				el.createEl('pre', { text: 'Invalid JSON' });
+				return;
+			}
 
-			let result = json;
-			let fieldResult;
+			let result: unknown = json;
+			let fieldResult = !Array.isArray(result);
 
 			if (query) {
 				result = executeQuery(json, query);
-				fieldResult = (query[query.length - 1].type === "field");
-			} else {
-				fieldResult = !Array.isArray(result);
+				fieldResult = query[query.length - 1]?.type === "field";
 			}
 
 			if (!format || format === "json") {
-				el.createEl('pre', { text: JSON.stringify(result, null, 2), cls: 'QJSON-' + id + ' cdQjson ' + showJson });
+				el.createEl('pre', { text: formatOutput(result), cls: 'QJSON-' + id + ' cdQjson ' + showJson });
 			} else {
 				if (fieldResult) {
 					/*if (selectedFields || !(typeof result === 'object')) {
@@ -214,11 +248,10 @@ export default class QJSON extends Plugin {
 							for (let i = 0; i < result.length; i++) {
 								ul.createEl('li', { text: formatOutput(result[i]) });
 							}
-						} else if (typeof result === 'object') {
-							for (const key of result) {
-								const tr = tbody.createEl('tr');
-								tr.createEl('th', { text: key });
-								tr.createEl('td', { text: formatOutput(result[key]) });
+						} else if (result && typeof result === 'object') {
+							for (const [key, value] of Object.entries(result as Record<string, unknown>)) {
+								const li = ul.createEl('li');
+								li.appendText(`${key}: ${formatOutput(value)}`);
 							}
 						} else {
 							new Notice('unsupported object type');
@@ -234,11 +267,11 @@ export default class QJSON extends Plugin {
 								const tr = tbody.createEl('tr');
 								tr.createEl('td', { text: formatOutput(result[i]) });
 							}
-						} else if (typeof result === 'object') {
-							for (const key of result) {
+						} else if (result && typeof result === 'object') {
+							for (const [key, value] of Object.entries(result as Record<string, unknown>)) {
 								const tr = tbody.createEl('tr');
 								tr.createEl('th', { text: key });
-								tr.createEl('td', { text: formatOutput(result[key]) });
+								tr.createEl('td', { text: formatOutput(value) });
 							}
 						} else {
 							new Notice('unsupported object type');
@@ -269,12 +302,14 @@ export default class QJSON extends Plugin {
 						el.createEl('pre', { text: 'Table & list can only be created from array' });
 						return;
 					}
-					if (!selectedFields && result.length > 0) {
-						if (Array.isArray(result[0]) || typeof result[0] !== 'object') {
-							result = result.map(e => { return {entry: e};});
+					let arrayResult = result as unknown[];
+					if (!selectedFields && arrayResult.length > 0) {
+						if (Array.isArray(arrayResult[0]) || typeof arrayResult[0] !== 'object') {
+							arrayResult = arrayResult.map((e) => ({ entry: e }));
+							result = arrayResult;
 						}
 						// just use all fields from the first element
-						selectedFields = Object.entries(result[0]).map(([k,v],i) => {return {
+						selectedFields = Object.entries(arrayResult[0] as Record<string, unknown>).map(([k]) => {return {
 								header: false,
 								bold: false,
 								comma: false,
@@ -282,15 +317,21 @@ export default class QJSON extends Plugin {
 								link: false,
 								name: null,
 								field: k,
+								template: null,
 								field2: null
 							};
 						});
 					}
-					let oEl;
+					if (!selectedFields || selectedFields.length === 0) {
+						new Notice('No fields found to render');
+						el.createEl('pre', { text: 'No fields found to render' });
+						return;
+					}
+					let oEl: HTMLElement;
 					let titleNum = 1;
 					if (format === "list") {
 						if (selectedFields[0].header && selectedFields[0].name) {
-							formatElement(el, selectedFields[0], null, selectedFields[0].name);
+							formatElement(el, selectedFields[0], {}, selectedFields[0].name);
 						}
 						oEl = el.createEl('ul', { attr:{ style:"list-style-position: outside;"}});
 					} else if (format === "table") {
@@ -299,24 +340,28 @@ export default class QJSON extends Plugin {
 						oEl = table.createEl('tbody');
 						const tr = thead.createEl('tr');
 						for (const select of selectedFields) {
-							const name = select.name || select.field;
-							let td = tr.createEl('td');
+							const name = select.name || select.field || '';
+							const td = tr.createEl('td');
 							td.createEl('b', {text: name});
 						}
+					} else {
+						return;
 					}
-					let eEl;
-					for (const entry of result) {
+					let eEl: HTMLElement;
+					for (const entry of arrayResult) {
 						if (format === "list") {
-							let hEl = oEl.createEl('li');
+							const hEl = oEl.createEl('li');
 							if (selectedFields[0].header) {
-								formatElement(hEl, selectedFields[0], entry);
+								formatElement(hEl, selectedFields[0], (entry as Record<string, unknown>) ?? {});
 							} else {
 								hEl.appendText(""+(titleNum++));
 							}
 
-							eEl = hEl.createEl('lu', { attr:{ style:"list-style-position: inside;"}});
+							eEl = hEl.createEl('ul', { attr:{ style:"list-style-position: inside;"}});
 						} else if (format === "table") {
 							eEl = oEl.createEl('tr');
+						} else {
+							return;
 						}
 						for (const select of selectedFields) {
 							if (format === "list") {
@@ -324,22 +369,22 @@ export default class QJSON extends Plugin {
 									// header value is already upper list content
 									continue;
 								}
-								let fEl = eEl.createEl('li');
+								const fEl = eEl.createEl('li');
 								if (select.name) {
 									fEl.appendText(select.name);
 								} else {
-									fEl.appendText(select.field);
+									fEl.appendText(select.field || '');
 								}
 								fEl.appendText(': ');
-								formatElement(fEl, select, entry);
+								formatElement(fEl, select, (entry as Record<string, unknown>) ?? {});
 							} else if (format === "table") {
-								let fEl;
+								let fEl: HTMLElement;
 								if (select.header) {
 									fEl = eEl.createEl('th');
 								} else {
 									fEl = eEl.createEl('td');
 								}
-								formatElement(fEl, select, entry);
+								formatElement(fEl, select, (entry as Record<string, unknown>) ?? {});
 							}
 						}
 					}
@@ -347,81 +392,96 @@ export default class QJSON extends Plugin {
 				//return;
 			}
 
-			this.qjsonBlockCount++;
 		});
 
 		this.registerEvent(this.app.workspace.on('editor-change', async (editor) => {
 			const cursor = editor.getCursor();
 			const line = editor.getLine(cursor.line);
 			const lastChar = line[line.length - 1];
-
-			const match = line.match(/@(.+)>(.+)|@(.+)>/);
+			if (lastChar !== ';' && lastChar !== '.' && lastChar !== '>' && lastChar !== ']') return;
+			const atIndex = line.lastIndexOf('@');
+			if (atIndex === -1) return;
+			const queryPart = line.slice(atIndex);
+			const match = queryPart.match(/^@([^>]+)>(.*)$/);
 			if (!match) return;
 
-			if (lastChar !== ';' && lastChar !== '.' && lastChar !== '>' && lastChar !== ']') return;
+			const id = match[1].trim();
+			const rawPath = match[2];
+			const path = rawPath.length > 0 ? rawPath.slice(0, -1).trim() : '';
 
-			const id = match[1] || match[3];
-			let path = "";
-
-			if (match[2] !== undefined) {
-				path = match[2].slice(0, -1).replace(/>/, '')
-			}
-
-			let json;
-
-			if (!isNaN(parseInt(id)) && !id.includes('.json')) {
-				const el = document.querySelector('.QJSON-' + id) as HTMLElement | null;
-				if (!el) return;
-				json = JSON.parse(el.textContent || '');
-			} else {
-				json = JSON.parse(await this.app.vault.adapter.read(id));
-			}
-
-			path = path.replace(/\*/g, '').replace(/\[\]/g, '');
-			let value = getJSONPath(json, path);
+			const json = await this.resolveJsonSource(id);
+			if (json === undefined) return;
+			let value = this.evaluateInlinePath(json, path);
 
 			if (lastChar !== ';') {
 				if (value !== undefined) {
 					const notice = document.querySelector('.notice');
 					if (notice) notice.remove();
 
-					const keys = Object.keys(value);
-					const keysAreNumbers = keys.every(key => !isNaN(parseInt(key)));
-
 					if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
 						new Notice(value.toString());
-					} else if (keysAreNumbers) {
-						new Notice('Total Keys: ' + (keys.length - 1));
-					} else {
-						new Notice('Total Keys: ' + keys.length + '\n' + '____________' + '\n' + keys.join('\n'));
+					} else if (value && typeof value === 'object') {
+						const keys = Object.keys(value as Record<string, unknown>);
+						const keysAreNumbers = keys.every((key) => !Number.isNaN(Number.parseInt(key, 10)));
+						if (keysAreNumbers) {
+							new Notice('Total Keys: ' + keys.length);
+						} else {
+							new Notice('Total Keys: ' + keys.length + '\n' + '____________' + '\n' + keys.join('\n'));
+						}
 					}
 				} 
 			} else {
-				if (line.includes('[*]')) {
-					const temp_data = [];
-					const arrayMatch = line.match(/(.+)\[\*\](?:\.(\w+))?/);
-					if (arrayMatch) {
-						const arrayKey = arrayMatch[1].slice(arrayMatch[1].indexOf('>') + 1);
-						const property = arrayMatch[2];
-						const arrayElements = getJSONPath(json, arrayKey);
-						for (let i = 0; i < arrayElements.length; i++) {
-							if (property) {
-								temp_data.push(arrayElements[i][property]);
-							} else {
-								temp_data.push(arrayElements[i]);
-							}
-						}
-					}
-					value = temp_data;
-				}
-				const atIndex = line.indexOf('@');
 				const replaceEnd = { line: cursor.line, ch: line.length }; // Replace to end of line
-				const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+				const stringValue = typeof value === 'string' ? value : formatOutput(value);
 				editor.replaceRange(stringValue, { line: cursor.line, ch: atIndex }, replaceEnd);
 			}
 		}));
 
 	}
+
+	private async resolveJsonSource(id: string): Promise<unknown | undefined> {
+		if (!Number.isNaN(Number.parseInt(id, 10)) && !id.includes('.json')) {
+			const jsonEl = document.querySelector('.QJSON-' + id) as HTMLElement | null;
+			if (!jsonEl?.textContent) {
+				return undefined;
+			}
+			try {
+				return JSON.parse(jsonEl.textContent);
+			} catch {
+				new Notice('Invalid JSON source for ID ' + id);
+				return undefined;
+			}
+		}
+		try {
+			const source = await this.app.vault.adapter.read(id);
+			return JSON.parse(source);
+		} catch {
+			try {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile || !activeFile.parent) {
+					return undefined;
+				}
+				const source = await this.app.vault.adapter.read(`${activeFile.parent.path}/${id}`);
+				return JSON.parse(source);
+			} catch {
+				new Notice(`Unable to load JSON file: ${id}`);
+				return undefined;
+			}
+		}
+	}
+
+	private evaluateInlinePath(json: unknown, path: string): unknown {
+		if (!path) {
+			return json;
+		}
+		try {
+			return executeQuery(json, parseQuery(path));
+		} catch {
+			const cleanPath = path.replace(/\*/g, '').replace(/\[\]/g, '');
+			return getJSONPath(json, cleanPath);
+		}
+	}
+
 	private async countQjsonBlocks() {
 		const activeFile = this.app.workspace.getActiveFile();
 		if (!activeFile) {
@@ -448,9 +508,15 @@ export default class QJSON extends Plugin {
 				}
 			}
 
-			// Show duplicates warning
+			// Show duplicates warning only when changed, to avoid spamming on every keypress.
 			if (duplicateIds.size > 0) {
-				new Notice(`Duplicate QJSON IDs found: ${Array.from(duplicateIds).join(', ')}`);
+				const duplicateKey = Array.from(duplicateIds).sort().join(',');
+				if (duplicateKey !== this.lastDuplicateIds) {
+					new Notice(`Duplicate QJSON IDs found: ${Array.from(duplicateIds).join(', ')}`);
+					this.lastDuplicateIds = duplicateKey;
+				}
+			} else {
+				this.lastDuplicateIds = '';
 			}
 
 			// Only count unique IDs
@@ -469,38 +535,41 @@ export default class QJSON extends Plugin {
 	}
 
 	onunload() {
-		this.qjsonBlockCount = 0;
 		this.statusBarItemEl.setText('');
 	}
 }
 
 
-function formatElement(parent: Element, format: Object, json: Object, text?: string) {
+function formatElement(
+	parent: Element,
+	format: SelectedField,
+	json: Record<string, unknown>,
+	text?: string | string[]
+): void {
 	if (!text) {
 		if (format.field) {
 			const textJson = json[format.field];
 			if (Array.isArray(textJson)) {
-				text = textJson.map(j => formatOutput(j));
+				text = textJson.map((j) => formatOutput(j));
 			} else {
 				text = formatOutput(textJson);
 			}
-		} else {
+		} else if (format.template) {
 			text = formatString(format.template, json);
+		} else {
+			text = '';
 		}
 	}
 
-	let el;
-	if (format.bold) {
-		el = parent.createEl('b');
-	} else {
-		el = parent;
-	}
+	const el = format.bold ? parent.createEl('b') : parent;
 	
 	if (Array.isArray(text)) {
 		let idx = 0;
-		for (let t of text) {
+		for (const t of text) {
 			if (format.link) {
-				el.createEl('a', {text: t, href: json[format.field2][idx]});
+				const links = format.field2 ? json[format.field2] : undefined;
+				const href = Array.isArray(links) ? String(links[idx] ?? '') : '';
+				el.createEl('a', { text: t, href });
 			} else {
 				el.appendText(t);
 			}
@@ -517,10 +586,10 @@ function formatElement(parent: Element, format: Object, json: Object, text?: str
 		}
 	} else {
 		if (format.link) {
-			el.createEl('a', {text: text, href: json[format.field2]});
+			const href = format.field2 ? String(json[format.field2] ?? '') : '';
+			el.createEl('a', { text, href });
 		} else {
 			el.appendText(text);
 		}
 	}
 }
-
