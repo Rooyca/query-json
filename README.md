@@ -111,6 +111,21 @@ Or query a specific property across all array elements:
 @data.json>characters[*].name;
 ```
 
+### Array Index Selection
+
+Select specific indices from an array:
+
+```
+@data.json>characters[0,3].name;
+@data.json>characters.{0,3}.name;
+```
+
+Select a range using slice notation:
+
+```
+@data.json>characters[0:3].name;
+```
+
 ### Property Substitution
 
 Use frontmatter properties in your queries with `{this.PROPERTY}`:
@@ -143,6 +158,12 @@ Filter array elements using bracket notation with conditions:
 #qj-query: characters[win_rate >= 55 && role == Mage]
 ```
 ~~~
+
+Nested keys are supported in conditions, and a leading `.` is allowed when filtering a top-level array:
+
+```
+@data.json>[.show.ids.trakt == 1 || .show.ids.trakt == 9].show;
+```
 
 **Supported operators:**
 
@@ -435,4 +456,3 @@ Contributions are welcome! If you encounter bugs or have feature suggestions:
 
 - Created by [rooyca](https://github.com/rooyca)
 - Table formatting improvements by [@ozppupbg](https://github.com/ozppupbg)
-
